@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+# Inherit the gemspec runtime deps and the development deps from the main
+# Gemfile, then pin the web server under test.
+eval_gemfile "../Gemfile"
+
+gem "puma", "~> 7.0"
