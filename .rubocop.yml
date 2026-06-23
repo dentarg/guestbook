@@ -1,0 +1,32 @@
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "gemfiles/**/*"
+    - "vendor/**/*"
+
+# logfmt lines and IP-range tables read better a little wider than 80.
+Layout/LineLength:
+  Max: 120
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+# Examples and tests are allowed to be long and free-form.
+Metrics:
+  Enabled: false
+
+# `ENV["X"]` is the natural idiom in example config files; the explicit
+# `ENV.fetch("X", nil)` rewrite only adds noise.
+Style/FetchEnvVar:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false

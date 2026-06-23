@@ -1,0 +1,9 @@
+/.bundle/
+/pkg/
+/tmp/
+*.gem
+
+# A library should not check in resolved lockfiles; they're regenerated
+# per environment and per matrix gemfile.
+Gemfile.lock
+gemfiles/*.lock
