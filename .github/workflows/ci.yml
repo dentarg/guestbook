@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: RuboCop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - run: bundle exec rubocop
+
+  unit:
+    name: Unit (Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby:
+          - "3.1"
+          - "3.2"
+          - "3.3"
+          - "3.4"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rake test
+
+  integration:
+    name: Integration (${{ matrix.gemfile }}, Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      # Explicit combinations: Puma 7/8 on 3.2+, Falcon only where it's
+      # supported (it requires Ruby >= 3.3).
+      matrix:
+        include:
+          - ruby: "3.2"
+            gemfile: puma7
+            server: puma
+          - ruby: "3.3"
+            gemfile: puma7
+            server: puma
+          - ruby: "3.4"
+            gemfile: puma7
+            server: puma
+          - ruby: "3.2"
+            gemfile: puma8
+            server: puma
+          - ruby: "3.3"
+            gemfile: puma8
+            server: puma
+          - ruby: "3.4"
+            gemfile: puma8
+            server: puma
+          - ruby: "3.3"
+            gemfile: falcon
+            server: falcon
+          - ruby: "3.4"
+            gemfile: falcon
+            server: falcon
+    env:
+      BUNDLE_GEMFILE: gemfiles/${{ matrix.gemfile }}.gemfile
+      GUESTBOOK_SERVER: ${{ matrix.server }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rake test
