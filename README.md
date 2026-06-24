@@ -159,8 +159,7 @@ BUNDLE_GEMFILE=gemfiles/puma8.gemfile  GUESTBOOK_SERVER=puma   bundle exec rake 
 BUNDLE_GEMFILE=gemfiles/falcon.gemfile GUESTBOOK_SERVER=falcon bundle exec rake test
 ```
 
-CI runs the unit suite across Ruby 3.3, 3.4 and 4.0, and the integration suite
-against Puma 7, Puma 8 and Falcon.
+CI runs both suites across the supported Ruby versions and web servers.
 
 ## License
 
