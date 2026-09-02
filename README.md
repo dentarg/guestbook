@@ -114,6 +114,7 @@ ranges).
 | `io`          | `$stdout`     | Where lines are written (2nd positional arg).                            |
 | `peer:`       | `REMOTE_ADDR` | Callable resolving the trusted peer.                                     |
 | `forwarders:` | `[]`          | Ordered `Forwarder` list.                                                |
+| `fields:`     | `nil`         | Callable returning application-specific fields to append.               |
 | `timestamps:` | `true`        | Prefix an ISO8601 UTC timestamp. Disable where the platform timestamps.  |
 
 Disable `timestamps` in production when your platform's log shipper already
@@ -123,13 +124,27 @@ prepends one (Fly, Heroku); keep it on locally so server output is timestamped:
 use Guestbook, timestamps: ENV["RACK_ENV"] != "production"
 ```
 
+Downstream middleware can read the resolved values from the Rack environment
+using `Guestbook::PEER`, `Guestbook::CLIENT_IP`, and `Guestbook::SPOOFED`.
+They are available before the application is called, so authorization,
+rate-limiting, and logging can agree on the client address.
+
+Use `fields:` to append application-specific context after the request has
+run. Values use Guestbook's normal logfmt quoting, `nil` values are omitted,
+and built-in fields cannot be overridden:
+
+```ruby
+use Guestbook,
+    fields: ->(env) { { crawler: env["example.crawler"] } }
+```
+
 ### Logged fields
 
 `at` (always `info`), `method`, `host`, `path`, `query` (omitted when empty),
 `request_id` (`X-Request-ID`, omitted when absent), `status`, `bytes` (response
 `Content-Length`, omitted when absent), `duration` (seconds), `ip`, and
 `spoofed` (comma-separated header names, omitted when none). Values containing
-whitespace, `"` or `=` are quoted.
+whitespace, `"` or `=` are quoted. Application-specific `fields:` follow.
 
 Under Puma, logging is deferred via `rack.after_reply` so `duration` covers the
 full request including writing the response. Servers without it (e.g. Falcon)
