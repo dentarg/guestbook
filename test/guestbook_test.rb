@@ -85,6 +85,12 @@ class GuestbookTest < Minitest::Test
     assert_match(/ ip=2001:db8::1\z/, line.chomp)
   end
 
+  def test_logs_fly_request_id
+    line = logged("/", { "HTTP_FLY_REQUEST_ID" => "01JZ3M20F5W2Q819XJJ3P42WQ3-ord" })
+
+    assert_match(/ request_id=01JZ3M20F5W2Q819XJJ3P42WQ3-ord\b/, line)
+  end
+
   def test_honors_cf_connecting_ip_when_peer_is_cloudflare
     line = logged("/", {
                     "HTTP_CF_CONNECTING_IP" => "192.0.2.9",

@@ -71,7 +71,7 @@ nothing about them is special-cased in the middleware, so you can mix and
 match freely.
 
 **Fly.io** sets `Fly-Client-IP` to the peer that actually connected, so it
-can't be forged:
+can't be forged. Guestbook logs `Fly-Request-Id` as `request_id`:
 
 ```ruby
 use Guestbook, peer: Guestbook::Fly.peer
@@ -141,10 +141,11 @@ use Guestbook,
 ### Logged fields
 
 `at` (always `info`), `method`, `host`, `path`, `query` (omitted when empty),
-`request_id` (`X-Request-ID`, omitted when absent), `status`, `bytes` (response
-`Content-Length`, omitted when absent), `duration` (seconds), `ip`, and
-`spoofed` (comma-separated header names, omitted when none). Values containing
-whitespace, `"` or `=` are quoted. Application-specific `fields:` follow.
+`request_id` (`X-Request-ID` or `Fly-Request-Id`, omitted when absent),
+`status`, `bytes` (response `Content-Length`, omitted when absent), `duration`
+(seconds), `ip`, and `spoofed` (comma-separated header names, omitted when
+none). Values containing whitespace, `"` or `=` are quoted.
+Application-specific `fields:` follow.
 
 Under Puma, logging is deferred via `rack.after_reply` so `duration` covers the
 full request including writing the response. Servers without it (e.g. Falcon)
