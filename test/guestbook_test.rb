@@ -73,6 +73,15 @@ class GuestbookTest < Minitest::Test
     assert_match(/ ip=198\.51\.100\.23\z/, line.chomp)
   end
 
+  def test_logs_heroku_request_id
+    line = logged("/", {
+                    "HTTP_X_FORWARDED_FOR" => "198.51.100.23",
+                    "HTTP_X_REQUEST_ID" => "f9ed4675f1c53513c61a3b3b4e25b4c0",
+                  }, peer: Guestbook::Heroku.peer, forwarders: [])
+
+    assert_match(/ request_id=f9ed4675f1c53513c61a3b3b4e25b4c0\b/, line)
+  end
+
   def test_honors_x_real_ip_when_peer_is_a_trusted_proxy
     forwarders = [Guestbook::Forwarder.new(header: "X-Real-IP",
                                            ranges: ["212.63.204.17", "2a01:298:f6:ffff::f"])]

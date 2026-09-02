@@ -77,6 +77,7 @@ class Guestbook
       "host" => req.host,
       "path" => req.path,
       "query" => req.query_string.empty? ? nil : req.query_string,
+      "request_id" => env["HTTP_X_REQUEST_ID"],
       "status" => status,
       "bytes" => headers["content-length"],
       "duration" => format("%.4f", duration),

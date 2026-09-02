@@ -78,7 +78,8 @@ use Guestbook, peer: Guestbook::Fly.peer
 ```
 
 **Heroku**'s router appends the connecting peer to `X-Forwarded-For`; the
-rightmost entry is the trustworthy one:
+rightmost entry is the trustworthy one. Guestbook also logs Heroku's
+`X-Request-ID` header as `request_id`:
 
 ```ruby
 use Guestbook, peer: Guestbook::Heroku.peer
@@ -125,9 +126,10 @@ use Guestbook, timestamps: ENV["RACK_ENV"] != "production"
 ### Logged fields
 
 `at` (always `info`), `method`, `host`, `path`, `query` (omitted when empty),
-`status`, `bytes` (response `Content-Length`, omitted when absent), `duration`
-(seconds), `ip`, and `spoofed` (comma-separated header names, omitted when
-none). Values containing whitespace, `"` or `=` are quoted.
+`request_id` (`X-Request-ID`, omitted when absent), `status`, `bytes` (response
+`Content-Length`, omitted when absent), `duration` (seconds), `ip`, and
+`spoofed` (comma-separated header names, omitted when none). Values containing
+whitespace, `"` or `=` are quoted.
 
 Under Puma, logging is deferred via `rack.after_reply` so `duration` covers the
 full request including writing the response. Servers without it (e.g. Falcon)

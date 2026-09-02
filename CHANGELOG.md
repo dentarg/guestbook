@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Log the Heroku `X-Request-ID` header as `request_id` when present.
 - Initial release: the `Guestbook` Rack middleware logging one logfmt line per
   request (Host header included), with proxy-aware client IP resolution and
   presets for Cloudflare, Fly.io and Heroku.
