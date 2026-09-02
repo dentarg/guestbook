@@ -25,6 +25,9 @@ require_relative "guestbook/version"
 class Guestbook
   RACK_AFTER_REPLY = "rack.after_reply"
   RACK_ERRORS = "rack.errors"
+  PEER = "guestbook.peer"
+  CLIENT_IP = "guestbook.client_ip"
+  SPOOFED = "guestbook.spoofed"
 
   # The peer used when no +peer:+ is configured: the address that opened the
   # connection, as the server saw it. Correct when nothing fronts the app.
@@ -38,18 +41,25 @@ class Guestbook
   #   carrying the real client IP and the proxy ranges allowed to set it. The
   #   first forwarder whose ranges contain the peer wins.
   #
+  # fields: callable (env -> Hash) supplying application-specific fields to
+  #   append to the log line. Core Guestbook fields cannot be overridden.
+  #
   # timestamps: prefix each line with an ISO8601 UTC timestamp. Disable when
   #   the platform's log shipper already timestamps (e.g. Fly, Heroku).
-  def initialize(app, io = $stdout, peer: DEFAULT_PEER, forwarders: [], timestamps: true)
+  def initialize(app, io = $stdout, peer: DEFAULT_PEER, forwarders: [], fields: nil, timestamps: true)
     @app = app
     @io = io
     @peer = peer
     @forwarders = forwarders
+    @fields = fields
     @timestamps = timestamps
   end
 
   def call(env)
     began_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    # Resolve before calling the application so downstream middleware can use
+    # the same trusted values Guestbook will log.
+    resolve(env)
     status, headers, body = @app.call(env)
     log = -> { write_line(env, status, headers, began_at) }
 
@@ -70,7 +80,6 @@ class Guestbook
   def write_line(env, status, headers, began_at)
     duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - began_at
     req = Rack::Request.new(env)
-    ip, spoofed = client_ip(env)
     pairs = {
       "at" => "info",
       "method" => req.request_method,
@@ -81,9 +90,10 @@ class Guestbook
       "status" => status,
       "bytes" => headers["content-length"],
       "duration" => format("%.4f", duration),
-      "ip" => ip,
-      "spoofed" => spoofed.empty? ? nil : spoofed.join(","),
+      "ip" => env[CLIENT_IP],
+      "spoofed" => env[SPOOFED].empty? ? nil : env[SPOOFED].join(","),
     }
+    @fields&.call(env)&.each { |key, value| pairs[key.to_s] = value unless pairs.key?(key.to_s) }
     line = pairs.filter_map { |key, value| "#{key}=#{quote(value)}" unless value.nil? }.join(" ")
     line = "#{Time.now.utc.iso8601(3)} #{line}" if @timestamps
     @io.write("#{line}\n")
@@ -94,7 +104,7 @@ class Guestbook
   # Resolve the client IP. Start from the trusted peer; for each forwarder
   # whose ranges contain the peer, honor its header. A forwarder header
   # present from any other peer is flagged spoofed and ignored.
-  def client_ip(env)
+  def resolve(env)
     peer = @peer.call(env)
     ip = nil
     spoofed = []
@@ -109,7 +119,9 @@ class Guestbook
       end
     end
 
-    [ip || peer, spoofed]
+    env[PEER] = peer
+    env[CLIENT_IP] = ip || peer
+    env[SPOOFED] = spoofed
   end
 
   def quote(value)

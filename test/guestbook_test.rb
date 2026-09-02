@@ -42,6 +42,36 @@ class GuestbookTest < Minitest::Test
     assert_match(/\Aat=info method=GET /, io.string)
   end
 
+  def test_exposes_resolution_to_the_application
+    seen = nil
+    app = Guestbook.new(lambda { |env|
+      seen = env
+      [200, {}, ["ok"]]
+    }, StringIO.new, peer: Guestbook::Fly.peer,
+                     forwarders: [Guestbook::Cloudflare.forwarder], timestamps: false)
+
+    app.call(Rack::MockRequest.env_for("/",
+                                       "HTTP_FLY_CLIENT_IP" => "173.245.48.7",
+                                       "HTTP_CF_CONNECTING_IP" => "192.0.2.9"))
+
+    assert_equal "173.245.48.7", seen[Guestbook::PEER]
+    assert_equal "192.0.2.9", seen[Guestbook::CLIENT_IP]
+    assert_equal [], seen[Guestbook::SPOOFED]
+  end
+
+  def test_logs_additional_fields_set_by_the_application
+    io = StringIO.new
+    fields = ->(env) { { "crawler" => env["example.crawler"], "ua" => env["HTTP_USER_AGENT"] } }
+    app = Guestbook.new(lambda { |env|
+      env["example.crawler"] = "ExampleBot"
+      [451, {}, ["blocked"]]
+    }, io, fields: fields, timestamps: false)
+
+    app.call(Rack::MockRequest.env_for("/", "HTTP_USER_AGENT" => "Example Bot/1.0"))
+
+    assert_match(%r{ crawler=ExampleBot ua="Example Bot/1\.0"\z}, io.string.chomp)
+  end
+
   # The default peer (no provider preset) is the connecting address.
   def test_default_peer_logs_remote_addr
     line = logged("/", peer: Guestbook::DEFAULT_PEER, forwarders: [])
